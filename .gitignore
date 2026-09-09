@@ -146,7 +146,6 @@ web/out/
 web/build/
 web/*.tsbuildinfo
 web/next-env.d.ts
-web/package-lock.json
 web/dark_mode_home.png
 
 # ================================================================
@@ -168,7 +167,11 @@ graphzep_service/src/**/*.js.map
 # ================================================================
 # Root-level stale files
 # ================================================================
-package-lock.json
+# Anchored to root: a bare "package-lock.json" (no leading /) matches at ANY
+# depth, which was silently excluding web/, graphzep_service/, and
+# graphzep_service/server/'s own lockfiles too — the actual reason `npm ci`
+# had nothing to install from in every Docker build of those two services.
+/package-lock.json
 diff_changes.txt
 
 # ================================================================
