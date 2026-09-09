@@ -7,7 +7,9 @@ import { theme } from '@/styles/theme';
 import { apiFetch } from '@/lib/app-session';
 import { useAppSession } from '@/context/AppSessionContext';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8501';
+// `??`, not `||` — see context/AppSessionContext.tsx for why an intentionally
+// empty NEXT_PUBLIC_API_URL (same-origin, relative) must not be treated as unset.
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8501';
 
 // ---- 预设标签 ----
 const PRESET_GENRES = [

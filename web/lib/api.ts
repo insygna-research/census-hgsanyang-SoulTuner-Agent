@@ -6,6 +6,15 @@ import {
     SessionRequestContext,
 } from '@/lib/app-session';
 
+// `??`, not `||` — see context/AppSessionContext.tsx for why an intentionally
+// empty NEXT_PUBLIC_API_URL (same-origin, relative, proxied server-side by
+// next.config.js's rewrites) must not be treated as unset. Every call below used
+// to hardcode "http://localhost:8501" directly instead of reading this at all,
+// which only ever worked from the browser on the machine actually running
+// `docker compose up` — anywhere else (this platform included) the browser's
+// own "localhost" is the visitor's computer, not the backend.
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8501';
+
 export interface RefinementOption {
     label: string;
     prompt: string;
@@ -55,7 +64,7 @@ export function streamRecommendations(
     const startStream = async () => {
         try {
             const requestContext = getActiveRequestContext();
-            const response = await apiFetchFor(requestContext, `http://localhost:8501/api/recommendations/stream`, {
+            const response = await apiFetchFor(requestContext, `${API_BASE}/api/recommendations/stream`, {
                 method: 'POST',
                 headers: {
                     'Accept': 'text/event-stream',
@@ -160,7 +169,7 @@ export async function sendUserEvent(
     try {
         const requestContext = getActiveRequestContext();
         const eventContext = options.requestContext || requestContext;
-        const response = await apiFetchFor(eventContext, 'http://localhost:8501/api/user-event', {
+        const response = await apiFetchFor(eventContext, `${API_BASE}/api/user-event`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -246,7 +255,7 @@ export async function sendSongFeedback(params: {
     userId?: string;
 }): Promise<{ success: boolean; song_feedback_id?: string; error?: string }> {
     const requestContext = getActiveRequestContext();
-    const resp = await apiFetchFor(requestContext, 'http://localhost:8501/api/song-feedback', {
+    const resp = await apiFetchFor(requestContext, `${API_BASE}/api/song-feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -283,7 +292,7 @@ export async function sendSlateFeedback(params: {
     extra?: Record<string, any>;
 }): Promise<{ success: boolean; feedback_id?: string; error?: string }> {
     const requestContext = getActiveRequestContext();
-    const resp = await apiFetchFor(requestContext, 'http://localhost:8501/api/slate-feedback', {
+    const resp = await apiFetchFor(requestContext, `${API_BASE}/api/slate-feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -339,7 +348,7 @@ export interface CatalogDiagnostics {
 }
 
 export async function fetchCatalogDiagnostics(limit: number = 50): Promise<CatalogDiagnostics> {
-    const resp = await apiFetch(`http://localhost:8501/api/catalog-diagnostics?limit=${limit}`);
+    const resp = await apiFetch(`${API_BASE}/api/catalog-diagnostics?limit=${limit}`);
     if (!resp.ok) throw new Error(`曲库诊断失败: ${resp.status}`);
     return resp.json();
 }
@@ -376,7 +385,7 @@ export interface DislikedSongBackend {
 
 export async function fetchLikedSongs(limit: number = 50): Promise<LikedSongBackend[]> {
     try {
-        const resp = await apiFetch(`http://localhost:8501/api/liked-songs?limit=${limit}`);
+        const resp = await apiFetch(`${API_BASE}/api/liked-songs?limit=${limit}`);
         if (!resp.ok) return [];
         const data = await resp.json();
         return data.success ? data.songs : [];
@@ -388,7 +397,7 @@ export async function fetchLikedSongs(limit: number = 50): Promise<LikedSongBack
 
 export async function fetchDislikedSongs(limit: number = 50): Promise<DislikedSongBackend[]> {
     try {
-        const resp = await apiFetch(`http://localhost:8501/api/disliked-songs?limit=${limit}`);
+        const resp = await apiFetch(`${API_BASE}/api/disliked-songs?limit=${limit}`);
         if (!resp.ok) return [];
         const data = await resp.json();
         return data.success ? data.songs : [];
@@ -401,7 +410,7 @@ export async function fetchDislikedSongs(limit: number = 50): Promise<DislikedSo
 export async function removeDislike(songTitle: string, artist: string): Promise<boolean> {
     try {
         const resp = await apiFetch(
-            `http://localhost:8501/api/disliked-songs?song_title=${encodeURIComponent(songTitle)}&artist=${encodeURIComponent(artist)}`,
+            `${API_BASE}/api/disliked-songs?song_title=${encodeURIComponent(songTitle)}&artist=${encodeURIComponent(artist)}`,
             { method: 'DELETE' }
         );
         if (!resp.ok) return false;
@@ -420,7 +429,7 @@ export async function deleteSongFromLibrary(
 ): Promise<{ success: boolean; message: string; deleted_files?: string[] }> {
     try {
         const resp = await apiFetch(
-            `http://localhost:8501/api/songs?song_title=${encodeURIComponent(songTitle)}&artist=${encodeURIComponent(artist)}`,
+            `${API_BASE}/api/songs?song_title=${encodeURIComponent(songTitle)}&artist=${encodeURIComponent(artist)}`,
             { method: 'DELETE' },
         );
         if (!resp.ok) {
@@ -441,7 +450,7 @@ export async function acquireSong(song: {
     song_id?: string;
     platform?: string;
 }): Promise<{ success: boolean; message: string; song?: any; job_id?: string }> {
-    const resp = await apiFetch('http://localhost:8501/api/acquire-song', {
+    const resp = await apiFetch(`${API_BASE}/api/acquire-song`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -460,7 +469,7 @@ export async function acquireSong(song: {
 
 // ---- 搜索歌曲 ----
 export async function searchMusic(query: string, genre?: string): Promise<any> {
-    const resp = await apiFetch('http://localhost:8501/api/search', {
+    const resp = await apiFetch(`${API_BASE}/api/search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query, genre, limit: 20 }),
@@ -512,7 +521,7 @@ export interface IngestJob {
 
 export async function fetchPendingSongs(): Promise<PendingSong[]> {
     try {
-        const resp = await apiFetch('http://localhost:8501/api/pending-songs');
+        const resp = await apiFetch(`${API_BASE}/api/pending-songs`);
         if (!resp.ok) return [];
         const data = await resp.json();
         return data.success ? data.songs : [];
@@ -536,7 +545,7 @@ export async function ingestPendingSongs(songs: {
     metadata_source?: string;
 }[]): Promise<{ success: boolean; ingested: number; message: string; job_id?: string; enrichment?: string }> {
     try {
-        const resp = await apiFetch('http://localhost:8501/api/pending-songs/ingest', {
+        const resp = await apiFetch(`${API_BASE}/api/pending-songs/ingest`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ songs }),
@@ -554,7 +563,7 @@ export async function deletePendingSong(
 ): Promise<{ success: boolean }> {
     try {
         const resp = await apiFetch(
-            `http://localhost:8501/api/pending-songs?file_basename=${encodeURIComponent(fileBasename)}&ext=${encodeURIComponent(ext)}`,
+            `${API_BASE}/api/pending-songs?file_basename=${encodeURIComponent(fileBasename)}&ext=${encodeURIComponent(ext)}`,
             { method: 'DELETE' },
         );
         if (!resp.ok) return { success: false };
@@ -596,7 +605,7 @@ const EMPTY_DAILY: NeteaseDailyResult = {
 
 export async function fetchNeteaseAccount(): Promise<{ logged_in: boolean; nickname?: string; stale_session?: boolean }> {
     try {
-        const resp = await apiFetch(`http://localhost:8501/api/netease/account`);
+        const resp = await apiFetch(`${API_BASE}/api/netease/account`);
         if (!resp.ok) return { logged_in: false };
         return resp.json();
     } catch {
@@ -606,7 +615,7 @@ export async function fetchNeteaseAccount(): Promise<{ logged_in: boolean; nickn
 
 export async function startNeteaseQrLogin(): Promise<{ success: boolean; key?: string; qr_image?: string; error?: string }> {
     try {
-        const resp = await apiFetch(`http://localhost:8501/api/netease/login/qr`, { method: 'POST' });
+        const resp = await apiFetch(`${API_BASE}/api/netease/login/qr`, { method: 'POST' });
         if (!resp.ok) return { success: false, error: `HTTP ${resp.status}` };
         return resp.json();
     } catch (err: any) {
@@ -616,7 +625,7 @@ export async function startNeteaseQrLogin(): Promise<{ success: boolean; key?: s
 
 export async function checkNeteaseQrLogin(key: string): Promise<{ success: boolean; status?: string; error?: string }> {
     try {
-        const resp = await apiFetch(`http://localhost:8501/api/netease/login/check?key=${encodeURIComponent(key)}`);
+        const resp = await apiFetch(`${API_BASE}/api/netease/login/check?key=${encodeURIComponent(key)}`);
         if (!resp.ok) return { success: false, error: `HTTP ${resp.status}` };
         return resp.json();
     } catch (err: any) {
@@ -626,7 +635,7 @@ export async function checkNeteaseQrLogin(key: string): Promise<{ success: boole
 
 export async function logoutNetease(): Promise<{ success: boolean }> {
     try {
-        const resp = await apiFetch(`http://localhost:8501/api/netease/account`, { method: 'DELETE' });
+        const resp = await apiFetch(`${API_BASE}/api/netease/account`, { method: 'DELETE' });
         return resp.ok ? resp.json() : { success: false };
     } catch {
         return { success: false };
@@ -635,7 +644,7 @@ export async function logoutNetease(): Promise<{ success: boolean }> {
 
 export async function fetchNeteaseDaily(limit = 30): Promise<NeteaseDailyResult> {
     try {
-        const resp = await apiFetch(`http://localhost:8501/api/netease/daily?limit=${limit}`);
+        const resp = await apiFetch(`${API_BASE}/api/netease/daily?limit=${limit}`);
         if (!resp.ok) return EMPTY_DAILY;
         const data = await resp.json();
         return { ...EMPTY_DAILY, ...data };
@@ -653,7 +662,7 @@ export async function retainOnlineAudio(song: {
     artist?: string;
 }): Promise<{ success: boolean; message?: string; error?: string }> {
     try {
-        const resp = await apiFetch('http://localhost:8501/api/online-audio/retain', {
+        const resp = await apiFetch(`${API_BASE}/api/online-audio/retain`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(song),
@@ -671,7 +680,7 @@ export async function retainOnlineAudio(song: {
 
 export async function fetchIngestJobs(limit: number = 30): Promise<{ jobs: IngestJob[]; counts: Record<string, number> }> {
     try {
-        const resp = await apiFetch(`http://localhost:8501/api/ingest-jobs?limit=${limit}`);
+        const resp = await apiFetch(`${API_BASE}/api/ingest-jobs?limit=${limit}`);
         if (!resp.ok) return { jobs: [], counts: {} };
         const data = await resp.json();
         return data.success ? { jobs: data.jobs || [], counts: data.counts || {} } : { jobs: [], counts: {} };
@@ -683,7 +692,7 @@ export async function fetchIngestJobs(limit: number = 30): Promise<{ jobs: Inges
 
 export async function retryIngestJob(jobId: string): Promise<{ success: boolean }> {
     try {
-        const resp = await apiFetch(`http://localhost:8501/api/ingest-jobs/${encodeURIComponent(jobId)}/retry`, {
+        const resp = await apiFetch(`${API_BASE}/api/ingest-jobs/${encodeURIComponent(jobId)}/retry`, {
             method: 'POST',
         });
         if (!resp.ok) return { success: false };
@@ -758,7 +767,7 @@ export async function fetchLibrarySongs(
     const empty = { songs: [], total: 0, counts: { library: 0, candidate: 0 } };
     try {
         const resp = await apiFetch(
-            `http://localhost:8501/api/library-songs?offset=${offset}&limit=${limit}&tier=${tier}`
+            `${API_BASE}/api/library-songs?offset=${offset}&limit=${limit}&tier=${tier}`
         );
         if (!resp.ok) return empty;
         const data = await resp.json();
@@ -780,7 +789,7 @@ export async function purgeCatalogCandidates(
 ): Promise<{ success: boolean; eligible?: number; deleted?: number; sample?: Array<{ title: string; artist: string }>; error?: string }> {
     try {
         const resp = await apiFetch(
-            `http://localhost:8501/api/library-songs/purge-candidates?dry_run=${dryRun}`,
+            `${API_BASE}/api/library-songs/purge-candidates?dry_run=${dryRun}`,
             { method: 'POST' }
         );
         if (!resp.ok) {
@@ -805,7 +814,7 @@ export async function updateLibrarySongTags(song: {
     language?: string;
 }): Promise<{ success: boolean; error?: string }> {
     try {
-        const resp = await apiFetch('http://localhost:8501/api/library-songs/tags', {
+        const resp = await apiFetch(`${API_BASE}/api/library-songs/tags`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(song),
