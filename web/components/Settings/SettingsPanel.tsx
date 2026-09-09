@@ -7,7 +7,9 @@ import { apiFetch } from '@/lib/app-session';
 import { useLang } from '@/context/LanguageContext';
 import { LANGUAGES } from '@/lib/i18n';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8501';
+// `??`, not `||` — see context/AppSessionContext.tsx for why an intentionally
+// empty NEXT_PUBLIC_API_URL (same-origin, relative) must not be treated as unset.
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8501';
 
 // ---- LLM 提供商预设列表 ----
 const LLM_PROVIDERS = [

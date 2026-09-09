@@ -17,7 +17,13 @@ import {
   setActiveRequestContext,
 } from '@/lib/app-session';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8501';
+// `??`, not `||`: an intentionally EMPTY NEXT_PUBLIC_API_URL (same-origin relative
+// fetches, proxied server-side by next.config.js's rewrites — the only shape that
+// works once this app is deployed anywhere other than the developer's own machine,
+// where `localhost:8501` in the BROWSER means the visitor's own computer) is a
+// valid, deliberate value — `||` treats '' as falsy and silently overrides it back
+// to the hardcoded fallback, which is exactly the bug this fixes.
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8501';
 const PROFILE_CACHE_KEY = 'soultuner:profiles';
 const ACTIVE_PROFILE_KEY = 'soultuner:active-profile';
 const ACTIVE_MODE_KEY = 'soultuner:active-mode';
