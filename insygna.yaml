@@ -47,32 +47,43 @@ resources:
     limit: "3Gi"
 
 runtime:
+  # Every entry needs a role, and exactly one must be the app (the schema, PI-820): the app's
+  # figures are the top-level `resources` block above, so its entry carries no resources here.
   containers:
+    - name: backend
+      role: app
     - name: ingest-worker
+      role: auxiliary
       resources:
         cpu: { request: "250m", limit: "1000m" }
         memory: { request: "768Mi", limit: "2Gi" }
     - name: neo4j
+      role: auxiliary
       resources:
         cpu: { request: "250m", limit: "1000m" }
         memory: { request: "1Gi", limit: "2Gi" }
     - name: qdrant
+      role: auxiliary
       resources:
         cpu: { request: "100m", limit: "500m" }
         memory: { request: "256Mi", limit: "1Gi" }
     - name: graphzep
+      role: auxiliary
       resources:
         cpu: { request: "100m", limit: "250m" }
         memory: { request: "128Mi", limit: "512Mi" }
     - name: searxng
+      role: auxiliary
       resources:
         cpu: { request: "100m", limit: "250m" }
         memory: { request: "128Mi", limit: "512Mi" }
     - name: netease
+      role: auxiliary
       resources:
         cpu: { request: "50m", limit: "250m" }
         memory: { request: "64Mi", limit: "256Mi" }
     - name: frontend
+      role: auxiliary
       resources:
         cpu: { request: "100m", limit: "500m" }
         memory: { request: "128Mi", limit: "512Mi" }
