@@ -26,3 +26,53 @@ tags:
   - "hybrid-retrieval"
   - "knowledge-graph"
   - "python"
+
+# Compute, declared per container (PI-820/PI-835). This pod runs eight of the vendor's
+# containers; left undeclared they would share the platform's default pod budget
+# (500m / 1 CPU, 256Mi / 512Mi of limits) and each land under 50m / 64Mi. Sizes below
+# come from what each process is: the FastAPI backend loads audio-embedding models
+# (M2D, HuggingFace cache) and drives the LLM; the ingest worker runs the same code
+# offline; neo4j is configured for a 512m-1G heap plus page cache; qdrant holds the
+# vectors in RAM; graphzep / searxng / netease / the Next.js frontend are light Node,
+# Python or Go services. Pod limits total 5.25 CPU / 9.75Gi, requests 1.45 CPU / 4Gi,
+# under the platform's 6 CPU / 12Gi pod ceiling with the sidecar and init included.
+# The app's figures are the top-level `resources`; a companion's sit under
+# `runtime.containers[]`, matched by compose service name.
+resources:
+  cpu:
+    request: "500m"
+    limit: "1500m"
+  memory:
+    request: "1536Mi"
+    limit: "3Gi"
+
+runtime:
+  containers:
+    - name: ingest-worker
+      resources:
+        cpu: { request: "250m", limit: "1000m" }
+        memory: { request: "768Mi", limit: "2Gi" }
+    - name: neo4j
+      resources:
+        cpu: { request: "250m", limit: "1000m" }
+        memory: { request: "1Gi", limit: "2Gi" }
+    - name: qdrant
+      resources:
+        cpu: { request: "100m", limit: "500m" }
+        memory: { request: "256Mi", limit: "1Gi" }
+    - name: graphzep
+      resources:
+        cpu: { request: "100m", limit: "250m" }
+        memory: { request: "128Mi", limit: "512Mi" }
+    - name: searxng
+      resources:
+        cpu: { request: "100m", limit: "250m" }
+        memory: { request: "128Mi", limit: "512Mi" }
+    - name: netease
+      resources:
+        cpu: { request: "50m", limit: "250m" }
+        memory: { request: "64Mi", limit: "256Mi" }
+    - name: frontend
+      resources:
+        cpu: { request: "100m", limit: "500m" }
+        memory: { request: "128Mi", limit: "512Mi" }
